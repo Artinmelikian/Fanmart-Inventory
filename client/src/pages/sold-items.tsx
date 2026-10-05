@@ -108,6 +108,7 @@ export default function SoldItems() {
                 <TableRow>
                   <TableHead>Sale Date</TableHead>
                   <TableHead>Item Name</TableHead>
+                  <TableHead>Description</TableHead>
                   <TableHead className="text-right">Quantity Sold</TableHead>
                   <TableHead className="text-right">Flow (m³/h)</TableHead>
                   <TableHead className="text-right">Power (W)</TableHead>
@@ -124,6 +125,9 @@ export default function SoldItems() {
                     </TableCell>
                     <TableCell className="font-medium" data-testid={`text-itemname-${sale.id}`}>
                       {sale.itemName}
+                    </TableCell>
+                    <TableCell className="max-w-xs whitespace-normal break-words text-sm" data-testid={`text-description-${sale.id}`}>
+                      {sale.description || <span className="text-muted-foreground">—</span>}
                     </TableCell>
                     <TableCell className="text-right font-mono" data-testid={`text-quantity-${sale.id}`}>
                       {sale.quantitySold}

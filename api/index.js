@@ -37345,7 +37345,7 @@ var DbStorage = class {
     const result = await db.insert(sales).values(sale).returning();
     return result[0];
   }
-  async recordSale(itemId, quantity) {
+  async recordSale(itemId, quantity, description) {
     return await db.transaction(async (tx) => {
       const itemResult = await tx.select().from(items).where(eq(items.id, itemId));
       const item = itemResult[0];
@@ -37365,7 +37365,7 @@ var DbStorage = class {
         itemName: item.name,
         quantitySold: quantity,
         flow: item.flow,
-        description: item.description,
+        description: description?.trim() || null,
         power: item.power,
         weight: item.weight,
         speed: item.speed
@@ -37490,12 +37490,13 @@ async function registerRoutes(app2) {
   });
   const recordSaleSchema = external_exports.object({
     itemId: external_exports.number().int().positive(),
-    quantity: external_exports.number().int().positive()
+    quantity: external_exports.number().int().positive(),
+    description: external_exports.string().optional()
   });
   app2.post("/api/sales", async (req, res) => {
     try {
-      const { itemId, quantity } = recordSaleSchema.parse(req.body);
-      const sale = await storage.recordSale(itemId, quantity);
+      const { itemId, quantity, description } = recordSaleSchema.parse(req.body);
+      const sale = await storage.recordSale(itemId, quantity, description);
       res.json(sale);
     } catch (error) {
       if (error instanceof external_exports.ZodError) {

@@ -12,6 +12,7 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -26,6 +27,7 @@ import { useState, useEffect } from "react";
 const recordSaleSchema = z.object({
   itemId: z.string().min(1, "Please select an item"),
   quantity: z.coerce.number().int().min(1, "Quantity must be at least 1"),
+  description: z.string().optional(),
 });
 
 type RecordSaleFormValues = z.infer<typeof recordSaleSchema>;
@@ -44,6 +46,7 @@ export function RecordSaleForm({ items, onSubmit }: RecordSaleFormProps) {
     defaultValues: {
       itemId: "",
       quantity: 0,
+      description: "",
     },
   });
 
@@ -129,6 +132,25 @@ export function RecordSaleForm({ items, onSubmit }: RecordSaleFormProps) {
                       data-testid="input-sale-quantity"
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="e.g., where the fan was sold or which project it went to..."
+                      {...field}
+                      data-testid="input-sale-description"
+                    />
+                  </FormControl>
+                  <FormDescription>Optional</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

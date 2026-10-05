@@ -126,13 +126,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const recordSaleSchema = z.object({
     itemId: z.number().int().positive(),
     quantity: z.number().int().positive(),
+    description: z.string().optional(),
   });
 
   app.post("/api/sales", async (req, res) => {
     try {
-      const { itemId, quantity } = recordSaleSchema.parse(req.body);
-      
-      const sale = await storage.recordSale(itemId, quantity);
+      const { itemId, quantity, description } = recordSaleSchema.parse(req.body);
+
+      const sale = await storage.recordSale(itemId, quantity, description);
       res.json(sale);
     } catch (error) {
       if (error instanceof z.ZodError) {

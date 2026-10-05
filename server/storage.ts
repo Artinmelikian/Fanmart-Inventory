@@ -18,7 +18,7 @@ export interface IStorage {
   
   getAllSales(): Promise<Sale[]>;
   createSale(sale: InsertSale): Promise<Sale>;
-  recordSale(itemId: number, quantity: number): Promise<Sale>;
+  recordSale(itemId: number, quantity: number, description?: string): Promise<Sale>;
   returnSale(saleId: number): Promise<void>;
 }
 
@@ -91,7 +91,7 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
-  async recordSale(itemId: number, quantity: number): Promise<Sale> {
+  async recordSale(itemId: number, quantity: number, description?: string): Promise<Sale> {
     return await db.transaction(async (tx) => {
       const itemResult = await tx.select().from(items).where(eq(items.id, itemId));
       const item = itemResult[0];
@@ -120,7 +120,7 @@ export class DbStorage implements IStorage {
         itemName: item.name,
         quantitySold: quantity,
         flow: item.flow,
-        description: item.description,
+        description: description?.trim() || null,
         power: item.power,
         weight: item.weight,
         speed: item.speed,

@@ -19,6 +19,7 @@ export interface IStorage {
   getAllSales(): Promise<Sale[]>;
   createSale(sale: InsertSale): Promise<Sale>;
   recordSale(itemId: number, quantity: number, description?: string): Promise<Sale>;
+  updateSale(saleId: number, data: { quantitySold?: number; description?: string }): Promise<Sale>;
   returnSale(saleId: number): Promise<void>;
 }
 
@@ -127,6 +128,54 @@ export class DbStorage implements IStorage {
       }).returning();
       
       return saleResult[0];
+    });
+  }
+
+  async updateSale(
+    saleId: number,
+    data: { quantitySold?: number; description?: string },
+  ): Promise<Sale> {
+    return await db.transaction(async (tx) => {
+      const saleResult = await tx.select().from(sales).where(eq(sales.id, saleId));
+      const sale = saleResult[0];
+
+      if (!sale) {
+        throw new Error("Sale not found");
+      }
+
+      const newQuantity = data.quantitySold ?? sale.quantitySold;
+      const delta = newQuantity - sale.quantitySold;
+
+      // Selling more takes extra units from stock; selling fewer gives units back.
+      if (delta !== 0) {
+        const itemResult = await tx.select().from(items).where(eq(items.id, sale.itemId));
+        const item = itemResult[0];
+
+        if (!item) {
+          throw new Error("Item not found");
+        }
+
+        const updateResult = await tx
+          .update(items)
+          .set({ quantity: sql`${items.quantity} - ${delta}` })
+          .where(sql`${items.id} = ${sale.itemId} AND ${items.quantity} >= ${delta}`)
+          .returning();
+
+        if (updateResult.length === 0) {
+          throw new Error(`Insufficient stock. Available: ${item.quantity}, Requested: ${delta}`);
+        }
+      }
+
+      const updated = await tx
+        .update(sales)
+        .set({
+          quantitySold: newQuantity,
+          description: data.description ?? sale.description,
+        })
+        .where(eq(sales.id, saleId))
+        .returning();
+
+      return updated[0];
     });
   }
 

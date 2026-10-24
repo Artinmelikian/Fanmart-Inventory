@@ -27,7 +27,7 @@ import { useState, useEffect } from "react";
 const recordSaleSchema = z.object({
   itemId: z.string().min(1, "Please select an item"),
   quantity: z.coerce.number().int().min(1, "Quantity must be at least 1"),
-  description: z.string().optional(),
+  description: z.string().trim().min(1, "Description is required"),
 });
 
 type RecordSaleFormValues = z.infer<typeof recordSaleSchema>;
@@ -142,7 +142,7 @@ export function RecordSaleForm({ items, onSubmit }: RecordSaleFormProps) {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Description *</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="e.g., where the fan was sold or which project it went to..."
@@ -150,7 +150,6 @@ export function RecordSaleForm({ items, onSubmit }: RecordSaleFormProps) {
                       data-testid="input-sale-description"
                     />
                   </FormControl>
-                  <FormDescription>Optional</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

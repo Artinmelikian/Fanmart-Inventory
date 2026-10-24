@@ -22,12 +22,15 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
-import { Package, Undo2 } from "lucide-react";
+import { Package, Pencil, Undo2 } from "lucide-react";
+import { useState } from "react";
+import { EditSaleDialog } from "@/components/edit-sale-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 
 export default function SoldItems() {
   const { toast } = useToast();
+  const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const { data: sales = [], isLoading } = useQuery<Sale[]>({
     queryKey: ["/api/sales"],
   });
@@ -144,7 +147,17 @@ export default function SoldItems() {
                     <TableCell className="text-right font-mono text-muted-foreground" data-testid={`text-speed-${sale.id}`}>
                       {sale.speed ?? "—"}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right whitespace-nowrap">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mr-2"
+                        onClick={() => setEditingSale(sale)}
+                        data-testid={`button-edit-sale-${sale.id}`}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
@@ -184,6 +197,8 @@ export default function SoldItems() {
           </div>
         </CardContent>
       </Card>
+
+      <EditSaleDialog sale={editingSale} onClose={() => setEditingSale(null)} />
     </div>
   );
 }

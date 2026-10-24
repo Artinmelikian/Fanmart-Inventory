@@ -37373,6 +37373,33 @@ var DbStorage = class {
       return saleResult[0];
     });
   }
+  async updateSale(saleId, data) {
+    return await db.transaction(async (tx) => {
+      const saleResult = await tx.select().from(sales).where(eq(sales.id, saleId));
+      const sale = saleResult[0];
+      if (!sale) {
+        throw new Error("Sale not found");
+      }
+      const newQuantity = data.quantitySold ?? sale.quantitySold;
+      const delta = newQuantity - sale.quantitySold;
+      if (delta !== 0) {
+        const itemResult = await tx.select().from(items).where(eq(items.id, sale.itemId));
+        const item = itemResult[0];
+        if (!item) {
+          throw new Error("Item not found");
+        }
+        const updateResult = await tx.update(items).set({ quantity: sql`${items.quantity} - ${delta}` }).where(sql`${items.id} = ${sale.itemId} AND ${items.quantity} >= ${delta}`).returning();
+        if (updateResult.length === 0) {
+          throw new Error(`Insufficient stock. Available: ${item.quantity}, Requested: ${delta}`);
+        }
+      }
+      const updated = await tx.update(sales).set({
+        quantitySold: newQuantity,
+        description: data.description ?? sale.description
+      }).where(eq(sales.id, saleId)).returning();
+      return updated[0];
+    });
+  }
   async returnSale(saleId) {
     return await db.transaction(async (tx) => {
       const saleResult = await tx.select().from(sales).where(eq(sales.id, saleId));
@@ -37491,7 +37518,11 @@ async function registerRoutes(app2) {
   const recordSaleSchema = external_exports.object({
     itemId: external_exports.number().int().positive(),
     quantity: external_exports.number().int().positive(),
-    description: external_exports.string().optional()
+    description: external_exports.string().trim().min(1, "Description is required")
+  });
+  const updateSaleSchema = external_exports.object({
+    quantity: external_exports.number().int().positive().optional(),
+    description: external_exports.string().trim().min(1, "Description is required").optional()
   });
   app2.post("/api/sales", async (req, res) => {
     try {
@@ -37520,6 +37551,34 @@ async function registerRoutes(app2) {
       }
       console.error("Error recording sale:", error);
       res.status(500).json({ error: "Failed to record sale" });
+    }
+  });
+  app2.patch("/api/sales/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid sale ID" });
+      }
+      const { quantity, description } = updateSaleSchema.parse(req.body);
+      const sale = await storage.updateSale(id, { quantitySold: quantity, description });
+      res.json(sale);
+    } catch (error) {
+      if (error instanceof external_exports.ZodError) {
+        return res.status(400).json({ error: "Invalid sale data", details: error.errors });
+      }
+      if (error instanceof Error) {
+        if (error.message === "Sale not found") {
+          return res.status(404).json({ error: "Sale not found" });
+        }
+        if (error.message === "Item not found") {
+          return res.status(409).json({ error: "Cannot change quantity: the associated item no longer exists in inventory" });
+        }
+        if (error.message.includes("Insufficient stock")) {
+          return res.status(400).json({ error: error.message });
+        }
+      }
+      console.error("Error updating sale:", error);
+      res.status(500).json({ error: "Failed to update sale" });
     }
   });
   app2.post("/api/sales/:id/return", async (req, res) => {

@@ -126,7 +126,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const recordSaleSchema = z.object({
     itemId: z.number().int().positive(),
     quantity: z.number().int().positive(),
-    description: z.string().optional(),
+    description: z.string().trim().min(1, "Description is required"),
+  });
+
+  const updateSaleSchema = z.object({
+    quantity: z.number().int().positive().optional(),
+    description: z.string().trim().min(1, "Description is required").optional(),
   });
 
   app.post("/api/sales", async (req, res) => {
@@ -159,6 +164,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.error("Error recording sale:", error);
       res.status(500).json({ error: "Failed to record sale" });
+    }
+  });
+
+  // Edit a sale (description and/or quantity sold)
+  app.patch("/api/sales/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid sale ID" });
+      }
+
+      const { quantity, description } = updateSaleSchema.parse(req.body);
+      const sale = await storage.updateSale(id, { quantitySold: quantity, description });
+      res.json(sale);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid sale data", details: error.errors });
+      }
+
+      if (error instanceof Error) {
+        if (error.message === "Sale not found") {
+          return res.status(404).json({ error: "Sale not found" });
+        }
+        if (error.message === "Item not found") {
+          return res.status(409).json({ error: "Cannot change quantity: the associated item no longer exists in inventory" });
+        }
+        if (error.message.includes("Insufficient stock")) {
+          return res.status(400).json({ error: error.message });
+        }
+      }
+
+      console.error("Error updating sale:", error);
+      res.status(500).json({ error: "Failed to update sale" });
     }
   });
 

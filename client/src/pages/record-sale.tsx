@@ -14,7 +14,7 @@ export default function RecordSale() {
   });
 
   const recordSaleMutation = useMutation({
-    mutationFn: async (data: { itemId: string; quantity: number; description?: string }) => {
+    mutationFn: async (data: { itemId: string; quantity: number; description: string }) => {
       return await apiRequest("POST", "/api/sales", {
         itemId: parseInt(data.itemId),
         quantity: data.quantity,
